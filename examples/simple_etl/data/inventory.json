@@ -1,0 +1,7 @@
+[
+  {"id": 1, "product": "Apple", "stock": 100},
+  {"id": 2, "product": "Banana", "stock": 200},
+  {"id": 3, "product": "Orange", "stock": 150},
+  {"id": 4, "product": "Grape", "stock": 50},
+  {"id": 5, "product": "Melon", "stock": 30}
+]
