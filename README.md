@@ -67,3 +67,12 @@ cd my-project
 # Add graflow with all extras
 uv add graflow --extra all
 ```
+
+## Claude Skills to generate Graflow workflows
+
+<p align="left">
+  <a href="https://youtu.be/Wda9v0ndUYQ">
+    <img width="467" height="282" alt="image" src="https://github.com/user-attachments/assets/af48a126-0378-4521-af11-b0394e1b5fda" />
+  </a>
+</p>
+
