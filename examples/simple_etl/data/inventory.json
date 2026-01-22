@@ -1,7 +1,7 @@
 [
-  {"id": 1, "product": "Apple", "stock": 100},
-  {"id": 2, "product": "Banana", "stock": 200},
-  {"id": 3, "product": "Orange", "stock": 150},
-  {"id": 4, "product": "Grape", "stock": 50},
-  {"id": 5, "product": "Melon", "stock": 30}
+  {"product_id": 1, "product_name": "Widget A", "stock": 500, "warehouse": "A", "reorder_level": 100},
+  {"product_id": 2, "product_name": "Widget B", "stock": 200, "warehouse": "B", "reorder_level": 50},
+  {"product_id": 3, "product_name": "Widget C", "stock": 150, "warehouse": "A", "reorder_level": 75},
+  {"product_id": 4, "product_name": "Widget D", "stock": 80, "warehouse": "C", "reorder_level": 40},
+  {"product_id": 5, "product_name": "Widget E", "stock": 25, "warehouse": "B", "reorder_level": 20}
 ]

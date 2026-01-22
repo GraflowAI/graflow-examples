@@ -1,11 +1,9 @@
-"""
-Simple ETL Workflow
+"""Simple ETL Pipeline using Graflow.
 
-CSVファイルとJSONファイルからデータを並列で読み込み、
-集計・変換処理を行い、結果をコンソールに出力するワークフロー。
-
-Task Graph:
-    (extract_csv | extract_json) >> transform >> load
+This workflow demonstrates:
+- Parallel data extraction from CSV and JSON files
+- Filtering and aggregation transformations
+- Channel-based inter-task communication
 """
 
 import csv
@@ -17,145 +15,147 @@ from graflow.core.decorators import task
 from graflow.core.workflow import workflow
 
 
-# データディレクトリのパス
+# Data directory relative to this file
 DATA_DIR = Path(__file__).parent / "data"
 
 
 @task(inject_context=True)
-def extract_csv(ctx: TaskExecutionContext, file_path: str) -> list[dict]:
-    """CSVファイルからデータを読み込む"""
-    path = Path(file_path)
-    if not path.exists():
-        print(f"Warning: CSV file not found: {file_path}")
-        return []
+def extract_csv(ctx: TaskExecutionContext) -> list[dict]:
+    """Extract sales data from CSV file."""
+    csv_path = DATA_DIR / "sales.csv"
+    records = []
 
-    with open(path, encoding="utf-8") as f:
+    with open(csv_path, newline="") as f:
         reader = csv.DictReader(f)
-        data = []
         for row in reader:
-            data.append({
-                "id": int(row["id"]),
-                "product": row["product"],
+            records.append({
+                "product_id": int(row["product_id"]),
+                "product_name": row["product_name"],
                 "quantity": int(row["quantity"]),
-                "price": int(row["price"]),
+                "price": float(row["price"]),
+                "date": row["date"],
             })
 
-    print(f"Extracted {len(data)} records from CSV")
-    ctx.get_channel().set("csv_data", data)
-    return data
+    print(f"[extract_csv] Loaded {len(records)} sales records")
+    ctx.get_channel().set("csv_data", records)
+    return records
 
 
 @task(inject_context=True)
-def extract_json(ctx: TaskExecutionContext, file_path: str) -> list[dict]:
-    """JSONファイルからデータを読み込む"""
-    path = Path(file_path)
-    if not path.exists():
-        print(f"Warning: JSON file not found: {file_path}")
-        return []
+def extract_json(ctx: TaskExecutionContext) -> list[dict]:
+    """Extract inventory data from JSON file."""
+    json_path = DATA_DIR / "inventory.json"
 
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
+    with open(json_path) as f:
+        records = json.load(f)
 
-    print(f"Extracted {len(data)} records from JSON")
-    ctx.get_channel().set("json_data", data)
-    return data
+    print(f"[extract_json] Loaded {len(records)} inventory records")
+    ctx.get_channel().set("json_data", records)
+    return records
 
 
 @task(inject_context=True)
-def transform(ctx: TaskExecutionContext) -> list[dict]:
-    """データの集計・変換処理を行う"""
+def filter_data(ctx: TaskExecutionContext) -> dict:
+    """Filter sales data: keep only records with quantity >= 50."""
     channel = ctx.get_channel()
-    csv_data = channel.get("csv_data", [])
-    json_data = channel.get("json_data", [])
+    csv_data = channel.get("csv_data")
+    json_data = channel.get("json_data")
 
-    # JSONデータを商品名でインデックス化
-    inventory_by_product = {item["product"]: item["stock"] for item in json_data}
+    # Filter sales with quantity >= 50
+    filtered_sales = [r for r in csv_data if r["quantity"] >= 50]
 
-    # CSVデータと結合して集計
-    transformed = []
-    for sale in csv_data:
-        product = sale["product"]
-        quantity = sale["quantity"]
-        price = sale["price"]
-        stock = inventory_by_product.get(product, 0)
+    # Filter inventory with stock above reorder level
+    filtered_inventory = [r for r in json_data if r["stock"] > r["reorder_level"]]
 
-        transformed.append({
-            "product": product,
-            "quantity": quantity,
-            "price": price,
-            "revenue": quantity * price,
-            "stock": stock,
-            "stock_after_sale": stock - quantity,
-        })
+    filtered = {
+        "sales": filtered_sales,
+        "inventory": filtered_inventory,
+    }
 
-    print(f"Transformed {len(transformed)} records")
-    channel.set("transformed_data", transformed)
-    return transformed
+    print(f"[filter_data] Filtered to {len(filtered_sales)} sales, {len(filtered_inventory)} inventory items")
+    channel.set("filtered_data", filtered)
+    return filtered
 
 
 @task(inject_context=True)
-def load(ctx: TaskExecutionContext) -> None:
-    """結果をコンソールに出力する"""
+def aggregate_data(ctx: TaskExecutionContext) -> dict:
+    """Aggregate filtered data into summary statistics."""
     channel = ctx.get_channel()
-    data = channel.get("transformed_data", [])
+    filtered = channel.get("filtered_data")
 
-    print("\n" + "=" * 60)
-    print("ETL Result - Sales Summary with Inventory")
-    print("=" * 60)
+    sales = filtered["sales"]
+    inventory = filtered["inventory"]
 
-    # ヘッダー
-    print(f"{'Product':<10} {'Qty':>5} {'Price':>7} {'Revenue':>10} {'Stock':>7} {'After':>7}")
-    print("-" * 60)
+    # Sales aggregation
+    total_revenue = sum(r["quantity"] * r["price"] for r in sales)
+    total_quantity = sum(r["quantity"] for r in sales)
+    unique_products = len(set(r["product_id"] for r in sales))
 
-    # データ行
-    total_revenue = 0
-    for item in data:
-        print(
-            f"{item['product']:<10} "
-            f"{item['quantity']:>5} "
-            f"{item['price']:>7} "
-            f"{item['revenue']:>10} "
-            f"{item['stock']:>7} "
-            f"{item['stock_after_sale']:>7}"
-        )
-        total_revenue += item["revenue"]
+    # Inventory aggregation
+    total_stock = sum(r["stock"] for r in inventory)
+    warehouses = set(r["warehouse"] for r in inventory)
 
-    print("-" * 60)
-    print(f"{'Total Revenue:':<35} {total_revenue:>10}")
-    print("=" * 60)
+    aggregated = {
+        "sales_metrics": {
+            "total_revenue": round(total_revenue, 2),
+            "total_quantity": total_quantity,
+            "unique_products": unique_products,
+            "record_count": len(sales),
+        },
+        "inventory_metrics": {
+            "total_stock": total_stock,
+            "item_count": len(inventory),
+            "warehouse_count": len(warehouses),
+        },
+    }
+
+    print(f"[aggregate_data] Aggregated metrics computed")
+    channel.set("aggregated_results", aggregated)
+    return aggregated
 
 
-def run_etl(
-    csv_path: str | None = None,
-    json_path: str | None = None,
-) -> list[dict]:
-    """ETLワークフローを実行する
+@task(inject_context=True)
+def load_console(ctx: TaskExecutionContext) -> None:
+    """Display aggregated results to console."""
+    channel = ctx.get_channel()
+    results = channel.get("aggregated_results")
 
-    Args:
-        csv_path: CSVファイルのパス（デフォルト: data/sales.csv）
-        json_path: JSONファイルのパス（デフォルト: data/inventory.json）
+    print("\n" + "=" * 50)
+    print("         ETL PIPELINE RESULTS")
+    print("=" * 50)
 
-    Returns:
-        変換後のデータリスト
-    """
-    csv_path = csv_path or str(DATA_DIR / "sales.csv")
-    json_path = json_path or str(DATA_DIR / "inventory.json")
+    print("\n📊 Sales Metrics:")
+    sales = results["sales_metrics"]
+    print(f"   Total Revenue:    ${sales['total_revenue']:,.2f}")
+    print(f"   Total Quantity:   {sales['total_quantity']:,}")
+    print(f"   Unique Products:  {sales['unique_products']}")
+    print(f"   Records Processed:{sales['record_count']}")
 
+    print("\n📦 Inventory Metrics:")
+    inv = results["inventory_metrics"]
+    print(f"   Total Stock:      {inv['total_stock']:,}")
+    print(f"   Items in Stock:   {inv['item_count']}")
+    print(f"   Warehouses:       {inv['warehouse_count']}")
+
+    print("\n" + "=" * 50)
+
+
+def run_etl():
+    """Execute the ETL pipeline."""
     with workflow("simple_etl") as wf:
-        # タスクインスタンスを作成（パラメータをバインド）
-        csv_task = extract_csv(task_id="extract_csv", file_path=csv_path)
-        json_task = extract_json(task_id="extract_json", file_path=json_path)
+        # Create task instances with explicit task_ids for parallel group
+        csv_task = extract_csv(task_id="extract_csv")
+        json_task = extract_json(task_id="extract_json")
+        filter_task = filter_data(task_id="filter_data")
+        aggregate_task = aggregate_data(task_id="aggregate_data")
+        load_task = load_console(task_id="load_console")
 
-        # タスクグラフを構築
-        (csv_task | json_task).set_group_name("extract") >> transform >> load
+        # Define task graph: parallel extraction -> filter -> aggregate -> load
+        (csv_task | json_task).set_group_name("extractors") >> filter_task >> aggregate_task >> load_task
 
-        # ワークフローを実行
-        result, exec_ctx = wf.execute("extract", ret_context=True)
-
-        # 変換後のデータを返す
-        return exec_ctx.get_channel().get("transformed_data", [])
+        # Execute starting from the parallel extraction group
+        wf.execute("extractors")
 
 
 if __name__ == "__main__":
-    result = run_etl()
-    print(f"\nProcessed {len(result)} records successfully.")
+    run_etl()

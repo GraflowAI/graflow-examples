@@ -1,65 +1,76 @@
-# Workflow Design: Simple ETL
+# Workflow Design: Simple ETL Pipeline
 
 ## Overview
-CSVファイルとJSONファイルからデータを並列で読み込み、集計・変換処理を行い、結果をコンソールに出力するシンプルなETLワークフロー。
+A demonstration ETL workflow that extracts data from CSV and JSON files in parallel, applies filtering and aggregation transformations, and outputs results to the console.
+
+## Use Case
+Process sales data from a CSV file and inventory data from a JSON file, filter relevant records, aggregate metrics, and display a summary report.
 
 ## Tasks
 
 | Task ID | Responsibility | Inputs | Outputs |
 |---------|---------------|--------|---------|
-| extract_csv | CSVファイルからデータを読み込む | ファイルパス | レコードのリスト |
-| extract_json | JSONファイルからデータを読み込む | ファイルパス | レコードのリスト |
-| transform | データの集計・変換処理 | 抽出されたデータ | 変換後のデータ |
-| load | 結果をコンソールに出力 | 変換後のデータ | なし |
+| extract_csv | Read and parse CSV file | File path | List of records |
+| extract_json | Read and parse JSON file | File path | List of records |
+| filter_data | Filter records based on criteria | Raw records | Filtered records |
+| aggregate_data | Calculate summary statistics | Filtered records | Aggregated metrics |
+| load_console | Display results to console | Aggregated metrics | None (side effect) |
 
 ## Task Graph
-```
-(extract_csv | extract_json) >> transform >> load
-```
 
 ```
-┌─────────────┐
-│ extract_csv │──┐
-└─────────────┘  │
-                 ├──► transform ──► load
-┌──────────────┐ │
-│ extract_json │─┘
-└──────────────┘
+extract_csv ──┐
+              ├──> filter_data >> aggregate_data >> load_console
+extract_json ─┘
+```
+
+ASCII representation with operators:
+```
+(extract_csv | extract_json) >> filter_data >> aggregate_data >> load_console
 ```
 
 ## Channel Data Flow
 
 | Channel Key | Producer | Consumer | Description |
 |-------------|----------|----------|-------------|
-| csv_data | extract_csv | transform | CSVから抽出したレコード |
-| json_data | extract_json | transform | JSONから抽出したレコード |
-| transformed_data | transform | load | 変換後のデータ |
+| csv_data | extract_csv | filter_data | Raw records from CSV |
+| json_data | extract_json | filter_data | Raw records from JSON |
+| filtered_data | filter_data | aggregate_data | Records after filtering |
+| aggregated_results | aggregate_data | load_console | Summary statistics |
 
-## サンプルデータ構造
+## Sample Data Structure
 
-**CSVデータ例** (`data/sales.csv`):
+### CSV Input (sales.csv)
 ```csv
-id,product,quantity,price
-1,Apple,10,100
-2,Banana,20,50
-3,Orange,15,80
+product_id,product_name,quantity,price,date
+1,Widget A,100,9.99,2024-01-15
+2,Widget B,50,19.99,2024-01-16
 ```
 
-**JSONデータ例** (`data/inventory.json`):
+### JSON Input (inventory.json)
 ```json
 [
-  {"id": 1, "product": "Apple", "stock": 100},
-  {"id": 2, "product": "Banana", "stock": 200},
-  {"id": 3, "product": "Orange", "stock": 150}
+  {"product_id": 1, "stock": 500, "warehouse": "A"},
+  {"product_id": 2, "stock": 200, "warehouse": "B"}
 ]
 ```
 
-## Transform処理の詳細
-
-1. CSVとJSONのデータをproduct名で結合
-2. 各商品の売上額（quantity × price）を計算
-3. 在庫状況と合わせてサマリーを作成
-
 ## Error Handling
-- ファイルが存在しない場合: エラーメッセージを出力して空のデータを返す
-- データ形式が不正な場合: 該当レコードをスキップしてログ出力
+
+- **Strategy**: Fail-fast with descriptive error messages
+- File not found: Raise clear error with file path
+- Parse errors: Log and skip malformed records
+- Empty data: Proceed with warning message
+
+## Expected Output
+
+```
+=== ETL Pipeline Results ===
+Total Sales Records: 10
+Total Inventory Items: 5
+Filtered Records: 8
+Aggregated Metrics:
+  - Total Revenue: $1,234.56
+  - Total Quantity Sold: 150
+  - Products in Stock: 5
+```

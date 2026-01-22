@@ -1,12 +1,8 @@
-# Simple ETL Workflow
+# Simple ETL Pipeline
 
 ## Overview
 
-CSVファイルとJSONファイルからデータを並列で読み込み、集計・変換処理を行い、結果をコンソールに出力するシンプルなETLワークフローです。
-
-- 売上データ（CSV）と在庫データ（JSON）を結合
-- 各商品の売上額を計算
-- 販売後の在庫数を算出
+A demonstration ETL (Extract-Transform-Load) workflow that processes sales and inventory data using Graflow. This example showcases parallel data extraction, filtering, aggregation, and console output.
 
 ## Requirements
 
@@ -21,15 +17,12 @@ CSVファイルとJSONファイルからデータを並列で読み込み、集�
 PYTHONPATH=. uv run python examples/simple_etl/workflow.py
 ```
 
-### With Custom Data Files
+### Programmatic Usage
 
 ```python
 from examples.simple_etl.workflow import run_etl
 
-result = run_etl(
-    csv_path="path/to/your/sales.csv",
-    json_path="path/to/your/inventory.json"
-)
+run_etl()
 ```
 
 ## Workflow Structure
@@ -37,86 +30,77 @@ result = run_etl(
 ### Task Graph
 
 ```
-┌─────────────┐
-│ extract_csv │──┐
-└─────────────┘  │
-                 ├──► transform ──► load
-┌──────────────┐ │
-│ extract_json │─┘
-└──────────────┘
+extract_csv ──┐
+              ├──> filter_data >> aggregate_data >> load_console
+extract_json ─┘
+```
+
+Using Graflow operators:
+```python
+(extract_csv | extract_json) >> filter_data >> aggregate_data >> load_console
 ```
 
 ### Tasks
 
 | Task | Description |
 |------|-------------|
-| extract_csv | CSVファイルから売上データを読み込む |
-| extract_json | JSONファイルから在庫データを読み込む |
-| transform | データの結合・集計・変換を行う |
-| load | 結果をコンソールに整形出力する |
+| `extract_csv` | Reads sales data from `data/sales.csv` |
+| `extract_json` | Reads inventory data from `data/inventory.json` |
+| `filter_data` | Filters sales (qty >= 50) and inventory (stock > reorder level) |
+| `aggregate_data` | Computes summary statistics (revenue, quantities, stock) |
+| `load_console` | Displays formatted results to console |
 
 ### Channel Data Flow
 
 | Channel Key | Producer | Consumer | Description |
 |-------------|----------|----------|-------------|
-| csv_data | extract_csv | transform | CSVから抽出した売上レコード |
-| json_data | extract_json | transform | JSONから抽出した在庫レコード |
-| transformed_data | transform | load | 結合・変換後のデータ |
+| `csv_data` | extract_csv | filter_data | Raw sales records |
+| `json_data` | extract_json | filter_data | Raw inventory records |
+| `filtered_data` | filter_data | aggregate_data | Filtered records |
+| `aggregated_results` | aggregate_data | load_console | Summary statistics |
 
-## Data Format
+## Data Files
 
-### Input: sales.csv
+### sales.csv
 
-```csv
-id,product,quantity,price
-1,Apple,10,100
-2,Banana,20,50
-```
+Sales transaction data with fields:
+- `product_id`: Product identifier
+- `product_name`: Product name
+- `quantity`: Units sold
+- `price`: Unit price
+- `date`: Transaction date
 
-### Input: inventory.json
+### inventory.json
 
-```json
-[
-  {"id": 1, "product": "Apple", "stock": 100},
-  {"id": 2, "product": "Banana", "stock": 200}
-]
-```
-
-### Output
-
-```
-============================================================
-ETL Result - Sales Summary with Inventory
-============================================================
-Product      Qty   Price    Revenue   Stock   After
-------------------------------------------------------------
-Apple         10     100       1000     100      90
-Banana        20      50       1000     200     180
-------------------------------------------------------------
-Total Revenue:                            2000
-============================================================
-```
+Inventory status with fields:
+- `product_id`: Product identifier
+- `product_name`: Product name
+- `stock`: Current stock level
+- `warehouse`: Warehouse location
+- `reorder_level`: Minimum stock threshold
 
 ## Example Output
 
 ```
-Extracted 5 records from CSV
-Extracted 5 records from JSON
-Transformed 5 records
+[extract_csv] Loaded 10 sales records
+[extract_json] Loaded 5 inventory records
+[filter_data] Filtered to 6 sales, 5 inventory items
+[aggregate_data] Aggregated metrics computed
 
-============================================================
-ETL Result - Sales Summary with Inventory
-============================================================
-Product      Qty   Price    Revenue   Stock   After
-------------------------------------------------------------
-Apple         10     100       1000     100      90
-Banana        20      50       1000     200     180
-Orange        15      80       1200     150     135
-Grape          8     200       1600      50      42
-Melon          5     300       1500      30      25
-------------------------------------------------------------
-Total Revenue:                            6300
-============================================================
+==================================================
+         ETL PIPELINE RESULTS
+==================================================
 
-Processed 5 records successfully.
+📊 Sales Metrics:
+   Total Revenue:    $6,120.05
+   Total Quantity:   495
+   Unique Products:  3
+   Records Processed:6
+
+📦 Inventory Metrics:
+   Total Stock:      955
+   Items in Stock:   5
+   Warehouses:       3
+
+==================================================
 ```

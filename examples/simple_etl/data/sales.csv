@@ -1,6 +1,11 @@
-id,product,quantity,price
-1,Apple,10,100
-2,Banana,20,50
-3,Orange,15,80
-4,Grape,8,200
-5,Melon,5,300
+product_id,product_name,quantity,price,date
+1,Widget A,100,9.99,2024-01-15
+2,Widget B,50,19.99,2024-01-16
+3,Widget C,75,14.99,2024-01-17
+1,Widget A,120,9.99,2024-01-18
+4,Widget D,30,29.99,2024-01-19
+2,Widget B,45,19.99,2024-01-20
+5,Widget E,10,49.99,2024-01-21
+3,Widget C,60,14.99,2024-01-22
+1,Widget A,90,9.99,2024-01-23
+4,Widget D,25,29.99,2024-01-24
