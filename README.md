@@ -1,4 +1,6 @@
 # graflow-examples
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/GraflowAI/graflow-examples/blob/main/examples/notebooks/simple_etl.ipynb)
+
 Example codes repos for Graflow workflows
 
 ## Prerequisites
