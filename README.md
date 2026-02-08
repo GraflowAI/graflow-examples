@@ -1,80 +1,42 @@
 # graflow-examples
+
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/GraflowAI/graflow-examples/blob/main/examples/notebooks/simple_etl.ipynb)
 
-Example codes repos for Graflow workflows
+Example workflows for [Graflow](https://github.com/GraflowAI/graflow).
 
-## Prerequisites
-
-- Python 3.11 or higher
-
-## Installation
-
-### 1. Install uv (if not already installed)
-
-**macOS/Linux:**
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Windows:**
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Or via Homebrew (macOS):
-```bash
-brew install uv
-```
-
-### 2. Clone the repository
+## Quick Start
 
 ```bash
-git clone https://github.com/myui/graflow-examples.git
+git clone https://github.com/GraflowAI/graflow-examples.git
 cd graflow-examples
-```
-
-### 3. Set up the project
-
-```bash
-# Create a virtual environment and install dependencies
 uv sync
 ```
 
-This will automatically create a `.venv` directory and install all dependencies including `graflow[all]`.
-
-### 4. Activate the virtual environment (optional)
+Run an example:
 
 ```bash
-# macOS/Linux
-source .venv/bin/activate
-
-# Windows
-.venv\Scripts\activate
+PYTHONPATH=. uv run python examples/simple_etl/workflow.py
 ```
 
-Alternatively, you can run commands directly using `uv run`:
-```bash
-uv run python your_script.py
-```
+## Generate Workflows with Claude Code
 
-## Adding graflow to a new project
-
-If you're starting a new project and want to add graflow:
+This repo includes a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill that generates Graflow workflows through a structured plan-implement-review process.
 
 ```bash
-# Initialize a new project
-uv init my-project
-cd my-project
+# Launch Claude Code in this repo (the skill is auto-loaded from .claude/skills/)
+claude
 
-# Add graflow with all extras
-uv add graflow --extra all
+# Then use the /graflow-workflow command
+> /graflow-workflow Create an ETL pipeline that loads CSV data, filters rows, and outputs a summary
 ```
 
-## Claude Skills to generate Graflow workflows
+The `/graflow-workflow` skill guides you through:
+1. **Plan** — Requirements gathering and design document
+2. **Implement** — Code generation following Graflow patterns
+3. **Review** — Validation and README creation
 
 <p align="left">
   <a href="https://youtu.be/Wda9v0ndUYQ">
     <img width="467" height="282" alt="image" src="https://github.com/user-attachments/assets/af48a126-0378-4521-af11-b0394e1b5fda" />
   </a>
 </p>
-
